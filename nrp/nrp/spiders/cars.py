@@ -2,43 +2,45 @@ import scrapy
 from scrapy.http import HtmlResponse
 
 
-class CarsSpider(scrapy.Spider):
-    name = 'car'
+class CarSpider(scrapy.Spider):
+    name = 'cars'
 
     def start_requests(self):
-        url = "https://nrp-performance.file-service.com/tuning-specs/cupra"
-        yield scrapy.Request(url, callback=self.parse_second_page)
+        url = "https://nrp-performance.file-service.com/tuning-specs"
+        yield scrapy.Request(url, callback=self.parse_main_page)
 
-    def parse_first_page(self, response: HtmlResponse):
+    def parse_main_page(self, response: HtmlResponse):
         car_types = response.xpath(
             "//select[@id='make_id']/option[position()>1]/text()").getall()
         for car in car_types:
             car = car.replace(' ', '-').replace('&', 'and')
             car = response.urljoin('/tuning-specs/' + car)
-            yield scrapy.Request(car, callback=self.parse_second_page)
+            yield scrapy.Request(car, callback=self.parse_models_page)
 
-    def parse_second_page(self, response: HtmlResponse):
+    def parse_models_page(self, response: HtmlResponse):
         # Last link follows to 'overview' page, so we don't need it
         models = response.xpath("//a[@class='btn btn--ghost border']"
                                 "/@href").getall()[:-1]
-        yield from response.follow_all(models, callback=self.parse_third_page)
+        yield from response.follow_all(models,
+                                       callback=self.parse_generations_page)
 
-    def parse_third_page(self, response: HtmlResponse):
+    def parse_generations_page(self, response: HtmlResponse):
         # Last two links are 'overview' and 'back' link, we don't need them
         generations = response.xpath("//a[@class='btn btn--ghost border']"
                                      "/@href").getall()[:-2]
 
         yield from response.follow_all(generations,
-                                       callback=self.parse_fourth_page)
+                                       callback=self.parse_engines_page)
 
-    def parse_fourth_page(self, response: HtmlResponse):
+    def parse_engines_page(self, response: HtmlResponse):
         # We don't need last three links for about same reason listed above
         engines = response.xpath("//a[@class='btn btn--ghost border']"
                                  "/@href").getall()[:-3]
 
-        yield from response.follow_all(engines, callback=self.parse_fifth_page)
+        yield from response.follow_all(engines,
+                                       callback=self.parse_details_page)
 
-    def parse_fifth_page(self, response: HtmlResponse):
+    def parse_details_page(self, response: HtmlResponse):
         stats = response.xpath("//div[contains(@class, "
                                "'ChiptuningComparison__number')]/"
                                "text()").getall()
