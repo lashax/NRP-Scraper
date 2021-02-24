@@ -19,9 +19,17 @@ class CarsSpider(scrapy.Spider):
 
     def parse_second_page(self, response: HtmlResponse):
         # last link follows to 'overview' page, so we don't need it
-        models = response.xpath("//a[@class='btn btn--ghost border']/"
-                                "@href").getall()[:-1]
+        models = response.xpath("//a[@class='btn btn--ghost border']"
+                                "/@href").getall()[:-1]
         yield from response.follow_all(models, callback=self.parse_third_page)
 
-    def parse_third_page(self, response):
-        yield {'model': response.url}
+    def parse_third_page(self, response: HtmlResponse):
+        # last two links are 'overview' and 'back' link, we don't need them
+        generations = response.xpath("//a[@class='btn btn--ghost border']"
+                                     "/@href").getall()[:-2]
+
+        yield from response.follow_all(generations,
+                                       callback=self.parse_fourth_page)
+
+    def parse_fourth_page(self, response: HtmlResponse):
+        pass
